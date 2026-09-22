@@ -442,6 +442,25 @@ def init_api(email, password):
             # instead of relying on the library's own fallback.
             if not garmin.display_name:
                 garmin.display_name = email or getattr(garmin, "username", None)
+
+            # TEMP DIAGNOSTIC (remove once the correct identifier field is
+            # confirmed): the email fallback above gets a 403 from Garmin's
+            # usersummary-service, meaning it wants Garmin's own internal
+            # handle, not the login email. Log the raw socialProfile so we
+            # can see which key actually holds it. Written to old_stderr
+            # (the real stderr) since sys.stderr is redirected to a
+            # discarded buffer inside this try block.
+            try:
+                _prof = garmin.client.connectapi(
+                    "/userprofile-service/socialProfile"
+                )
+                print(
+                    f"[DIAG] socialProfile keys: {sorted(_prof.keys()) if isinstance(_prof, dict) else type(_prof)}",
+                    file=old_stderr,
+                )
+                print(f"[DIAG] socialProfile raw: {_prof}", file=old_stderr)
+            except Exception as _diag_e:
+                print(f"[DIAG] socialProfile fetch failed: {_diag_e}", file=old_stderr)
         finally:
             sys.stderr = old_stderr
 
