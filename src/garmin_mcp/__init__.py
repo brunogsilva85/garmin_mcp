@@ -439,28 +439,13 @@ def init_api(email, password):
             # to username when the key is entirely ABSENT from Garmin's
             # response -- not when it is present but an empty string (a real
             # case for older/migrated accounts). Patch around that bug here
-            # instead of relying on the library's own fallback.
+            # instead of relying on the library's own fallback. Confirmed via
+            # diagnostic logging (since removed) that this account's real
+            # displayName IS a valid, non-empty Garmin-internal handle, so
+            # this fallback is dead code for this account but kept as a
+            # defensive no-op for other accounts that may hit the real bug.
             if not garmin.display_name:
                 garmin.display_name = email or getattr(garmin, "username", None)
-
-            # TEMP DIAGNOSTIC (remove once the correct identifier field is
-            # confirmed): the email fallback above gets a 403 from Garmin's
-            # usersummary-service, meaning it wants Garmin's own internal
-            # handle, not the login email. Log the raw socialProfile so we
-            # can see which key actually holds it. Written to old_stderr
-            # (the real stderr) since sys.stderr is redirected to a
-            # discarded buffer inside this try block.
-            try:
-                _prof = garmin.client.connectapi(
-                    "/userprofile-service/socialProfile"
-                )
-                print(
-                    f"[DIAG] socialProfile keys: {sorted(_prof.keys()) if isinstance(_prof, dict) else type(_prof)}",
-                    file=old_stderr,
-                )
-                print(f"[DIAG] socialProfile raw: {_prof}", file=old_stderr)
-            except Exception as _diag_e:
-                print(f"[DIAG] socialProfile fetch failed: {_diag_e}", file=old_stderr)
         finally:
             sys.stderr = old_stderr
 
@@ -500,20 +485,6 @@ def init_api(email, password):
             # (garminconnect==0.3.2's display_name resolution bug).
             if not garmin.display_name:
                 garmin.display_name = email or getattr(garmin, "username", None)
-
-            # TEMP DIAGNOSTIC (remove once the correct identifier field is
-            # confirmed): see matching block in the token-resume path above.
-            try:
-                _prof = garmin.client.connectapi(
-                    "/userprofile-service/socialProfile"
-                )
-                print(
-                    f"[DIAG] socialProfile keys: {sorted(_prof.keys()) if isinstance(_prof, dict) else type(_prof)}",
-                    file=sys.stderr,
-                )
-                print(f"[DIAG] socialProfile raw: {_prof}", file=sys.stderr)
-            except Exception as _diag_e:
-                print(f"[DIAG] socialProfile fetch failed: {_diag_e}", file=sys.stderr)
             # Save Oauth1 and Oauth2 token files to directory for next login
             garmin.client.dump(tokenstore)
             # Restrict the freshly written tokens to owner-only. These are
