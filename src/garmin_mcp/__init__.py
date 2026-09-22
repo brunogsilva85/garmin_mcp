@@ -500,6 +500,20 @@ def init_api(email, password):
             # (garminconnect==0.3.2's display_name resolution bug).
             if not garmin.display_name:
                 garmin.display_name = email or getattr(garmin, "username", None)
+
+            # TEMP DIAGNOSTIC (remove once the correct identifier field is
+            # confirmed): see matching block in the token-resume path above.
+            try:
+                _prof = garmin.client.connectapi(
+                    "/userprofile-service/socialProfile"
+                )
+                print(
+                    f"[DIAG] socialProfile keys: {sorted(_prof.keys()) if isinstance(_prof, dict) else type(_prof)}",
+                    file=sys.stderr,
+                )
+                print(f"[DIAG] socialProfile raw: {_prof}", file=sys.stderr)
+            except Exception as _diag_e:
+                print(f"[DIAG] socialProfile fetch failed: {_diag_e}", file=sys.stderr)
             # Save Oauth1 and Oauth2 token files to directory for next login
             garmin.client.dump(tokenstore)
             # Restrict the freshly written tokens to owner-only. These are
