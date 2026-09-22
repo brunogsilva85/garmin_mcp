@@ -432,7 +432,7 @@ def init_api(email, password):
         sys.stderr = io.StringIO()
 
         try:
-            garmin = Garmin(is_cn=is_cn)
+            garmin = Garmin(email=email, is_cn=is_cn)
             garmin.login(tokenstore)
         finally:
             sys.stderr = old_stderr
