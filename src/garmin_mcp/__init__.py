@@ -434,6 +434,14 @@ def init_api(email, password):
         try:
             garmin = Garmin(email=email, is_cn=is_cn)
             garmin.login(tokenstore)
+            # garminconnect==0.3.2 resolves display_name via
+            # prof.get("displayName", self.username), which only falls back
+            # to username when the key is entirely ABSENT from Garmin's
+            # response -- not when it is present but an empty string (a real
+            # case for older/migrated accounts). Patch around that bug here
+            # instead of relying on the library's own fallback.
+            if not garmin.display_name:
+                garmin.display_name = email or getattr(garmin, "username", None)
         finally:
             sys.stderr = old_stderr
 
@@ -469,6 +477,10 @@ def init_api(email, password):
             if result1 == "needs_mfa":
                 mfa_code = get_mfa()
                 garmin.resume_login(result2, mfa_code)
+            # See the token-resume path above for why this fallback is needed
+            # (garminconnect==0.3.2's display_name resolution bug).
+            if not garmin.display_name:
+                garmin.display_name = email or getattr(garmin, "username", None)
             # Save Oauth1 and Oauth2 token files to directory for next login
             garmin.client.dump(tokenstore)
             # Restrict the freshly written tokens to owner-only. These are
